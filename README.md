@@ -13,6 +13,7 @@ Unlike traditional external window switchers (such as standalone GTK daemons, Ro
 ## Architecture & Design Highlights
 
 - **Zero Dedicated Daemon:** Operates within the resident shell runtime via Quickshell IPC, eliminating process spawn latency, duplicate IPC sockets, and background memory footprint.
+- **Intelligent First-Run Notification:** Automatically detects whether required Hyprland shortcuts are configured on startup. If unconfigured, a polite desktop notification reminds the user with instructions to configure them or run `setup.sh`. Silences automatically once shortcuts are set.
 - **Lazy Layer-Shell Surface:** Quick taps (`Alt+Tab` released within 160 ms) switch windows instantaneously without instantiating Wayland surfaces, graphics textures, or compositor animations. The visual card overlay is created only when `Alt` is held past the threshold.
 - **Compositor Custom Events:** Listens to raw Hyprland events (`native-switcher,next`, `native-switcher,prev`, `native-switcher,local-next`, `native-switcher,local-prev`, `native-switcher,release`) dispatched directly from compositor keybinds.
 - **Layout-Agnostic Physical Keycodes:** Uses XKB physical keycodes (`code:64` and `code:108` for Left/Right Alt; `code:49` for Grave/Tilde) to ensure deterministic release detection regardless of active keyboard layout (e.g., US, Persian, European variants).
@@ -115,8 +116,8 @@ hyprctl reload
 A natural question is whether the plugin can automatically edit `~/.config/hypr/user.lua` when first loaded:
 
 1. **Security & Sandbox Isolation (Ryoku Rule R8):** Ryoku plugins are strictly sandboxed. Writing to paths outside `$XDG_STATE_HOME/ryoku/plugins/<id>` triggers a blocking `config-write` security violation during `ryoku plugin validate`, immediately disqualifying the plugin from being published to the official **Ryostore** or loaded by the shell.
-2. **Configuration Integrity:** Modifying the user's primary compositor configuration from a background QML thread introduces race conditions and potential syntax corruption.
-3. **The Recommended Pattern:** Distributing the companion `setup.sh` script or publishing via the official Ryoku Hub store allows users to inspect and approve configuration changes safely.
+2. **Configuration Integrity:** Modifying the user's primary compositor configuration from a background QML thread without explicit user review is unsafe.
+3. **The Solution (Smart Detection & Notification):** Native Switcher runs a lightweight verifier (`bin/check-bindings`) on desktop startup. If the compositor bindings are missing, a system notification alerts the user with directions. Users can inspect the transparent `setup.sh` script and execute it, or copy the configuration block directly into `~/.config/hypr/user.lua`. Once configured, the notification never appears again.
 
 ---
 
